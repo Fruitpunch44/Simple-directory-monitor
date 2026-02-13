@@ -1,82 +1,87 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<windows.h>
-
+#include<stddef.h>
 #define MAX_PATH 70
-#define max_buffer_size 16384
+#define max_buffer_size 16384 //why this i don't know random size
 
-PCSTR Get_action_name(DWORD action){
-    const PCSTR action_names[]={
-        "0",
-        "File ADDED",
-        "File REMOVED",
-        "File MODIFIED",
-        "File RENAMED OLD NAME",
-        "File RENAMED NEW NAME"
+
+void file_actions(DWORD Action){
+    const char action[]={
+        "added",
+        "removed",
+        "modified",
+        "renamed from something",
+        "renamed to something"
     };
-    CHAR buffer[50];
-    if(action >= RTL_NUMBER_OF(action_names)){
-        sprintf(buffer,"Unknown action %d",action);
-        return buffer;
+    char Buffer[24];
+    if(Action>= RTL_NUMBER_OF(action)){
+        sprintf(Buffer,"%lU",Action);
+        return Buffer;
     }
-    return action_names[action];
+    return action[Action];
+
 }
 
-int main(){
-    WCHAR directroryname[MAX_PATH];
-    HANDLE directory_handle;
-    OVERLAPPED overlapped = {0};
-    FILE_NOTIFY_INFORMATION *FileNotifyinfo;
-    BYTE *FileNotifyInformationBuffer;
-    DWORD BytesReturned;
+void watch_directory(LPCWSTR directory){
+    HANDLE HDIR;
+    FILE_NOTIFY_INFORMATION *file_notification = NULL;
+    DWORD bytes_returned;
+    DWORD buffer_len;
     BOOL RET;
+    BYTE *file_notify_buffer;
+    file_notify_buffer =malloc(max_buffer_size);
+    if(!file_notify_buffer){
+        fprintf(stderr,"unable to allocate buffer size");
+        return;
+    }
+
+    char filename[MAX_PATH];
+    HDIR= CreateFile(directory,
+        FILE_LIST_DIRECTORY,
+        FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS,
+        NULL);
+    if(HDIR ==INVALID_HANDLE_VALUE){
+        fprintf(stderr,"unable to create handle %lu ",GetLastError());
+        CloseHandle(HDIR);
+        return;
+    }
+    while(1){
+        RET =ReadDirectoryChangesW(HDIR,
+            file_notify_buffer,
+            sizeof(file_notify_buffer),
+            TRUE,
+            FILE_NOTIFY_CHANGE_FILE_NAME|FILE_NOTIFY_CHANGE_ATTRIBUTES|FILE_NOTIFY_CHANGE_LAST_WRITE|FILE_NOTIFY_CHANGE_SECURITY,
+            &bytes_returned,
+            NULL,
+            NULL);
+            
+        if(!RET){
+            fprintf(stderr,"read directory changes failed %lu",GetLastError());
+            CloseHandle(HDIR);
+            break;
+        }
+        file_notification = file_notify_buffer;
+    }
 
 
-    if(!GetCurrentDirectory(RTL_NUMBER_OF(directroryname),directroryname)){
-        fprintf(stderr," unable to get current director %lu",GetLastError());
+}
+
+
+int main(int argc, char *argv[]){
+    if(argc <1){
+        fprintf(stderr,"please pass the dirrectoy path you want to use");
         exit(EXIT_FAILURE);
     }
-    directory_handle =CreateFile(directroryname,
-                        FILE_LIST_DIRECTORY,
-                        FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                        NULL,
-                        OPEN_EXISTING,
-                        FILE_FLAG_BACKUP_SEMANTICS,
-                        NULL);
-if(directory_handle == INVALID_HANDLE_VALUE){
-    fprintf(stderr,"an error %lu occured",GetLastError());
-    exit(EXIT_FAILURE);
-}
-overlapped.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
-if(overlapped.hEvent == NULL){
-    fprintf(stderr,"Created event failed %lu",GetLastError());
-    exit(EXIT_FAILURE);
+    char *directory = argv[1];
+    watch_directory(directory);
+    return 0;
 }
 
-FileNotifyInformationBuffer = malloc (1024);
-if(FileNotifyInformationBuffer == NULL){
-    fprintf(stderr,"Memory allocation failed");
-    exit(EXIT_FAILURE);
-}
-FileNotifyInformationBuffer = malloc(max_buffer_size);
-if(!FileNotifyInformationBuffer){
-    fprintf(stderr,"Memory allocation failed");
-    exit(EXIT_FAILURE);
-    CloseHandle(overlapped.hEvent);
-    CloseHandle(directory_handle);
-}
 
-while(1){
-    RET = ReadDirectoryChangesW(directory_handle,FileNotifyInformationBuffer,max_buffer_size,TRUE,
-                                FILE_NOTIFY_CHANGE_FILE_NAME|FILE_NOTIFY_CHANGE_DIR_NAME|
-                                FILE_NOTIFY_CHANGE_ATTRIBUTES|FILE_NOTIFY_CHANGE_SIZE|
-                                FILE_NOTIFY_CHANGE_LAST_WRITE|FILE_NOTIFY_CHANGE_CREATION,
-                                &BytesReturned,NULL,NULL);
-    if(!RET){
-        fprintf(stderr,"ReadDirectoryChangesW failed %lu",GetLastError());
-        free(FileNotifyInformationBuffer);
-        CloseHandle(overlapped.hEvent);
-        CloseHandle(directory_handle);
-        exit(EXIT_FAILURE);
-    }
-}
+//add parsing of the FILE_NOTIFY_INFORMATION structure and print the file name and action
+//THIngs to keep track off 
+//handle for crea
