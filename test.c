@@ -1,5 +1,7 @@
 #include "test.h"
 
+LPCWSTR global_dir = NULL; // global variable to store the directory path
+
 BOOL WINAPI console_handler(DWORD signal){
     if(signal == CTRL_C_EVENT){
         const char msg[] = "CTRL-C CAUGHT, exiting...\n";
@@ -8,11 +10,6 @@ BOOL WINAPI console_handler(DWORD signal){
         _exit(signal);
     }
     return TRUE;
-}
-void handle_signal(int signal){
-    const char msg[] = "SIGINT CAUGHT, exiting...\n";
-    write(STDOUT_FILENO, msg, sizeof(msg) - 1);
-    _exit(signal);
 }
 
 char *return_current_time(){
@@ -33,7 +30,8 @@ const char *file_actions(DWORD Action){
 }
 
 DWORD WINAPI watch_directory_thread(LPVOID lpParam){
-    LPCSTR directory = (LPCSTR)lpParam;
+    HWND hwndmain=(HWND)lpParam;
+    LPCWSTR directory = global_dir; // use the global variable to get the directory path
     HANDLE HDIR;
     HANDLE HEVENT;
 
@@ -57,19 +55,19 @@ DWORD WINAPI watch_directory_thread(LPVOID lpParam){
     if(HDIR ==INVALID_HANDLE_VALUE){
         fprintf(stderr,"unable to create handle %lu ",GetLastError());
         CloseHandle(HDIR);
-        return;
+        return EXIT_FAILURE;
     }
     HEVENT = CreateEvent(NULL,TRUE,FALSE,NULL);
     if(HEVENT == NULL){
         fprintf(stderr,"unable to create event %lu",GetLastError());
         CloseHandle(HDIR);
-        return;
+        return EXIT_FAILURE;
     }
 
     file_notify_buffer =malloc(max_buffer_size);
     if(!file_notify_buffer){
         fprintf(stderr,"unable to allocate buffer size");
-        return;
+        return EXIT_FAILURE;
     }
 
     fprintf(stdout,"watching directory %s for changes...\n",directory);
@@ -108,7 +106,6 @@ DWORD WINAPI watch_directory_thread(LPVOID lpParam){
         file_notification = (FILE_NOTIFY_INFORMATION *)file_notify_buffer;
 
         while(1){
-           strcpy(filename,"");
             int filename_len= WideCharToMultiByte(CP_UTF8,0,file_notification->FileName,
             file_notification->FileNameLength/sizeof(WCHAR),
             filename,MAX_PATH_SIZE,NULL,NULL);
@@ -116,10 +113,17 @@ DWORD WINAPI watch_directory_thread(LPVOID lpParam){
             char buffer[300];
             sprintf(buffer,"File: %s was %s at %s\n", filename, file_actions(file_notification->Action), return_current_time());
             fprintf(stdout,"%s",buffer);
+            WCHAR *file_copy= _wcsdup(file_notification->FileName);
+            PostMessageW(hwndmain, WM_FILE_CHANGED, (WPARAM)file_copy, (LPARAM)file_notification->Action);
+            //send message to main thread to show notificationp 
             if(file_notification->NextEntryOffset == 0){
                 break;
             }
             file_notification = (FILE_NOTIFY_INFORMATION*)((char*)file_notification + file_notification->NextEntryOffset);
         }
     }
+    free(file_notify_buffer);
+    CloseHandle(HDIR);
+    CloseHandle(HEVENT);
+    return 0;
 }
