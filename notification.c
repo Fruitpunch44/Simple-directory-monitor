@@ -4,7 +4,7 @@
 
 LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
     switch(message){
-        case WM_DESTROY:
+        case WM_MBUTTONDBLCLK:
             PostQuitMessage(0);
             break;
 
@@ -16,7 +16,20 @@ LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
             //pls note to self use ls when working with wide strings to prevent stress
             //sucks 
             swprintf(buffer, 512, L"File: %ls was %s at %s", filename, file_actions(action), return_current_time());
+            NOTIFYICONDATAW nid ={0};
+            nid.cbSize = sizeof(nid);
+            nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_INFO;
+            nid.uCallbackMessage = WM_TRAYICON;
+            nid.hIcon=LoadIcon(NULL,IDI_INFORMATION);
+            nid.dwInfoFlags = NIIF_INFO;
+            lstrcpyW(nid.szInfo,buffer);
+            Shell_NotifyIconW(NIM_ADD,&nid);
+            Shell_NotifyIconW(NIM_MODIFY,&nid);
+            Shell_NotifyIconW(NIM_DELETE,&nid);
+    
             MessageBoxW(hwnd, buffer, L"Directory Change", MB_OK | MB_ICONINFORMATION);
+
+            
 
             free(filename); // free the duplicated string
             break;

@@ -106,20 +106,20 @@ DWORD WINAPI watch_directory_thread(LPVOID lpParam){
         file_notification = (FILE_NOTIFY_INFORMATION *)file_notify_buffer;
 
         while(1){
-            int filename_len= WideCharToMultiByte(CP_UTF8,0,file_notification->FileName,
+            /* int filename_len= WideCharToMultiByte(CP_UTF8,0,file_notification->FileName,
             file_notification->FileNameLength/sizeof(WCHAR),
-            filename,MAX_PATH_SIZE,NULL,NULL);
-            filename[filename_len] = '\0';
-            char buffer[300];
-            sprintf(buffer,"File: %s was %s at %s\n", filename, file_actions(file_notification->Action), return_current_time());
-            fprintf(stdout,"%s",buffer);
+            filename,MAX_PATH_SIZE,NULL,NULL); 
+            This was just for testing with the console output not needed for now*/
+            
             WCHAR *file_copy= _wcsdup(file_notification->FileName);
+            file_copy[file_notification->FileNameLength/sizeof(WCHAR)] = L'\0'; // terminate null character
             PostMessageW(hwndmain, WM_FILE_CHANGED, (WPARAM)file_copy, (LPARAM)file_notification->Action);
             //send message to main thread to show notificationp 
             if(file_notification->NextEntryOffset == 0){
                 break;
             }
             file_notification = (FILE_NOTIFY_INFORMATION*)((char*)file_notification + file_notification->NextEntryOffset);
+
         }
     }
     free(file_notify_buffer);
