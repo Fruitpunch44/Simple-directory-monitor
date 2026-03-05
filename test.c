@@ -12,6 +12,7 @@ BOOL WINAPI console_handler(DWORD signal){
     return TRUE;
 }
 
+
 char *return_current_time(){
     time_t now;
     time(&now);
@@ -42,7 +43,7 @@ DWORD WINAPI watch_directory_thread(LPVOID lpParam){
     PVOID file_notify_buffer;
 
 
-    char filename[MAX_PATH_SIZE];
+    char filename[MAX_PATH_SIZE];//does not do anything just for testing purposes to convert wide char to multibyte char for console output
 
     HDIR= CreateFile(directory,
         FILE_LIST_DIRECTORY,
@@ -106,15 +107,16 @@ DWORD WINAPI watch_directory_thread(LPVOID lpParam){
         file_notification = (FILE_NOTIFY_INFORMATION *)file_notify_buffer;
 
         while(1){
+
             /* int filename_len= WideCharToMultiByte(CP_UTF8,0,file_notification->FileName,
             file_notification->FileNameLength/sizeof(WCHAR),
             filename,MAX_PATH_SIZE,NULL,NULL); 
             This was just for testing with the console output not needed for now*/
-            
+
             WCHAR *file_copy= _wcsdup(file_notification->FileName);
             file_copy[file_notification->FileNameLength/sizeof(WCHAR)] = L'\0'; // terminate null character
             PostMessageW(hwndmain, WM_FILE_CHANGED, (WPARAM)file_copy, (LPARAM)file_notification->Action);
-            //send message to main thread to show notificationp 
+            //send message to main thread to show notification
             if(file_notification->NextEntryOffset == 0){
                 break;
             }

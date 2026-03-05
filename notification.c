@@ -13,9 +13,18 @@ LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
             DWORD action = (DWORD)lparam;
 
             WCHAR buffer[512];
+            HANDLE CREATE_LOG_FILE;
+            CREATE_LOG_FILE = CreateFileW(L"file_changes.txt", FILE_APPEND_DATA, FILE_SHARE_READ|FILE_SHARE_WRITE,
+                                        NULL, OPEN_ALWAYS, 
+                                        FILE_ATTRIBUTE_NORMAL, NULL);
+            DWORD bytes_Written;
+            if(CREATE_LOG_FILE == INVALID_HANDLE_VALUE){
+                MessageBoxW(hwnd, L"Failed to create log file", L"Error", MB_OK | MB_ICONERROR);
+                return 0;
+            }
             //pls note to self use ls when working with wide strings to prevent stress
             //sucks 
-            swprintf(buffer, 512, L"File: %ls was %s at %s", filename, file_actions(action), return_current_time());
+            swprintf(buffer, 512, L"File: %ls was %s at %s\n", filename, file_actions(action), return_current_time());
             NOTIFYICONDATAW nid ={0};
             nid.cbSize = sizeof(nid);
             nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_INFO;
@@ -28,10 +37,26 @@ LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
             Shell_NotifyIconW(NIM_DELETE,&nid);
     
             MessageBoxW(hwnd, buffer, L"Directory Change", MB_OK | MB_ICONINFORMATION);
-
             
+            //convert from wide char to byte to write to a file
+            int log_file_len = (int)wcslen(buffer);
+            int num_chars = WideCharToMultiByte(CP_UTF8,0,buffer,log_file_len,NULL,0,NULL,NULL);
+            char *byte_buff = malloc(num_chars*sizeof(char));
 
+            if(!byte_buff){
+                MessageBoxW(NULL,L"unable to allocate memory for buff",L"error", MB_OK|MB_ICONERROR);
+                return 0;
+            }
+            
+            WideCharToMultiByte(CP_UTF8,0,buffer,log_file_len,byte_buff,num_chars,NULL,NULL);
+            byte_buff[num_chars] = '\0';
+            if(WriteFile(CREATE_LOG_FILE,byte_buff,strlen(byte_buff),&bytes_Written,NULL)==0){
+                MessageBoxW(NULL,L"Failed to write to file",L"error",MB_OK|MB_ICONERROR);
+            }
+            
+            CloseHandle(CREATE_LOG_FILE);
             free(filename); // free the duplicated string
+            free(byte_buff);
             break;
 
         default:
