@@ -4,6 +4,7 @@
 
 LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
     switch(message){
+        //doesn't do shit rn
         case WM_MBUTTONDBLCLK:
             PostQuitMessage(0);
             break;
