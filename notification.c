@@ -1,10 +1,41 @@
 #include "notification.h"
 #include "test.h"
 
+void handle_icons_popup(WCHAR *buffer){
+             NOTIFYICONDATAW nid ={0};
+            nid.cbSize = sizeof(nid);
+            nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_INFO;
+            nid.uCallbackMessage = WM_TRAYICON;
+            nid.hIcon=LoadIcon(NULL,IDI_INFORMATION);
+            nid.dwInfoFlags = NIIF_INFO;
+            lstrcpyW(nid.szInfo,buffer);
+            Shell_NotifyIconW(NIM_ADD,&nid);
+            Shell_NotifyIconW(NIM_MODIFY,&nid);
+            Shell_NotifyIconW(NIM_DELETE,&nid);
 
+}
+void save_to_file(HANDLE file,WCHAR  *buffer,DWORD written_bytes){
+    //convert from wide char to byte to write to a file
+            int log_file_len = (int)wcslen(buffer);
+            int num_chars = WideCharToMultiByte(CP_UTF8,0,buffer,log_file_len,NULL,0,NULL,NULL);
+            char *byte_buff = malloc(num_chars*sizeof(char));
+
+            if(!byte_buff){
+                MessageBoxW(NULL,L"unable to allocate memory for buff",L"error", MB_OK|MB_ICONERROR);
+                return 0;
+            }
+
+            WideCharToMultiByte(CP_UTF8,0,buffer,log_file_len,byte_buff,num_chars,NULL,NULL);
+            byte_buff[num_chars] = '\0';
+            if(WriteFile(file,byte_buff,num_chars,&written_bytes,NULL)==0){
+                MessageBoxW(NULL,L"Failed to write to file",L"error",MB_OK|MB_ICONERROR);
+            }
+            free(byte_buff);
+}
 LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
     switch(message){
-        case WM_MBUTTONDBLCLK:
+        
+        case WM_DESTROY:
             PostQuitMessage(0);
             break;
 
@@ -24,39 +55,14 @@ LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
             }
             //pls note to self use ls when working with wide strings to prevent stress
             //sucks 
-            swprintf(buffer, 512, L"File: %ls was %s at %s\n", filename, file_actions(action), return_current_time());
-            NOTIFYICONDATAW nid ={0};
-            nid.cbSize = sizeof(nid);
-            nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_INFO;
-            nid.uCallbackMessage = WM_TRAYICON;
-            nid.hIcon=LoadIcon(NULL,IDI_INFORMATION);
-            nid.dwInfoFlags = NIIF_INFO;
-            lstrcpyW(nid.szInfo,buffer);
-            Shell_NotifyIconW(NIM_ADD,&nid);
-            Shell_NotifyIconW(NIM_MODIFY,&nid);
-            Shell_NotifyIconW(NIM_DELETE,&nid);
-    
+            swprintf(buffer, 512, L"File: %ls was %s at %s in %s \n", filename, file_actions(action), return_current_time());
+            handle_icons_popup(buffer);
             MessageBoxW(hwnd, buffer, L"Directory Change", MB_OK | MB_ICONINFORMATION);
             
             //convert from wide char to byte to write to a file
-            int log_file_len = (int)wcslen(buffer);
-            int num_chars = WideCharToMultiByte(CP_UTF8,0,buffer,log_file_len,NULL,0,NULL,NULL);
-            char *byte_buff = malloc(num_chars*sizeof(char));
-
-            if(!byte_buff){
-                MessageBoxW(NULL,L"unable to allocate memory for buff",L"error", MB_OK|MB_ICONERROR);
-                return 0;
-            }
-            
-            WideCharToMultiByte(CP_UTF8,0,buffer,log_file_len,byte_buff,num_chars,NULL,NULL);
-            byte_buff[num_chars] = '\0';
-            if(WriteFile(CREATE_LOG_FILE,byte_buff,strlen(byte_buff),&bytes_Written,NULL)==0){
-                MessageBoxW(NULL,L"Failed to write to file",L"error",MB_OK|MB_ICONERROR);
-            }
-            
+            save_to_file(CREATE_LOG_FILE,buffer,bytes_Written);
             CloseHandle(CREATE_LOG_FILE);
             free(filename); // free the duplicated string
-            free(byte_buff);
             break;
 
         default:

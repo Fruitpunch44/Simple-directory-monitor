@@ -10,6 +10,8 @@
 extern LPCWSTR global_dir; // declare the global variable to store the directory path
 
 LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam);
+void handle_icons_popup(WCHAR *buffer);
+void save_to_file(HANDLE file,WCHAR  *buffer,DWORD written_bytes);
 
 
 #endif
