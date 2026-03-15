@@ -1,7 +1,30 @@
 #include "notification.h"
 #include "test.h"
 
-void handle_icons_popup(WCHAR *buffer){
+
+LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
+    switch(message){
+        case WM_MBUTTONDBLCLK:
+            PostQuitMessage(0);
+            break;
+
+        case WM_FILE_CHANGED:
+            LPWSTR filename = (LPWSTR)wparam;
+            DWORD action = (DWORD)lparam;
+
+            WCHAR buffer[512];
+            HANDLE CREATE_LOG_FILE;
+            CREATE_LOG_FILE = CreateFileW(L"file_changes.txt", FILE_APPEND_DATA, FILE_SHARE_READ|FILE_SHARE_WRITE,
+                                        NULL, OPEN_ALWAYS, 
+                                        FILE_ATTRIBUTE_NORMAL, NULL);
+            DWORD bytes_Written;
+            if(CREATE_LOG_FILE == INVALID_HANDLE_VALUE){
+                MessageBoxW(hwnd, L"Failed to create log file", L"Error", MB_OK | MB_ICONERROR);
+                return 0;
+            }
+            //pls note to self use ls when working with wide strings to prevent stress
+            //sucks 
+            swprintf(buffer, 512, L"File: %ls was %s at %s\n", filename, file_actions(action), return_current_time());
             NOTIFYICONDATAW nid ={0};
             nid.cbSize = sizeof(nid);
             nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_INFO;
