@@ -2,7 +2,7 @@
 #include "test.h"
 
 void handle_icons_popup(WCHAR *buffer){
-             NOTIFYICONDATAW nid ={0};
+            NOTIFYICONDATAW nid ={0};
             nid.cbSize = sizeof(nid);
             nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_INFO;
             nid.uCallbackMessage = WM_TRAYICON;
@@ -14,7 +14,7 @@ void handle_icons_popup(WCHAR *buffer){
             Shell_NotifyIconW(NIM_DELETE,&nid);
 
 }
-void save_to_file(HANDLE file,WCHAR  *buffer,DWORD written_bytes){
+void save_to_file(HANDLE file,WCHAR *buffer,DWORD written_bytes){
     //convert from wide char to byte to write to a file
             int log_file_len = (int)wcslen(buffer);
             int num_chars = WideCharToMultiByte(CP_UTF8,0,buffer,log_file_len,NULL,0,NULL,NULL);
@@ -22,7 +22,7 @@ void save_to_file(HANDLE file,WCHAR  *buffer,DWORD written_bytes){
 
             if(!byte_buff){
                 MessageBoxW(NULL,L"unable to allocate memory for buff",L"error", MB_OK|MB_ICONERROR);
-                return 0;
+                return ;
             }
 
             WideCharToMultiByte(CP_UTF8,0,buffer,log_file_len,byte_buff,num_chars,NULL,NULL);
@@ -43,7 +43,7 @@ LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
             LPWSTR filename = (LPWSTR)wparam;
             DWORD action = (DWORD)lparam;
 
-            WCHAR buffer[512];
+            WCHAR buffer[800];
             HANDLE CREATE_LOG_FILE;
             CREATE_LOG_FILE = CreateFileW(L"file_changes.txt", FILE_APPEND_DATA, FILE_SHARE_READ|FILE_SHARE_WRITE,
                                         NULL, OPEN_ALWAYS, 
@@ -55,7 +55,7 @@ LRESULT CALLBACK Wndproc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam){
             }
             //pls note to self use ls when working with wide strings to prevent stress
             //sucks 
-            swprintf(buffer, 512, L"File: %ls was %s at %s in %s \n", filename, file_actions(action), return_current_time());
+            swprintf(buffer, 800, L"File: %ls was %s at %s in %ls \n", filename, file_actions(action), return_current_time(),global_dir);
             handle_icons_popup(buffer);
             MessageBoxW(hwnd, buffer, L"Directory Change", MB_OK | MB_ICONINFORMATION);
             
